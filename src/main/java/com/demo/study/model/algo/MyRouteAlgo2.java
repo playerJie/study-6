@@ -1,9 +1,13 @@
 package com.demo.study.model.algo;
 
-import com.demo.study.model.AlgoType;
 import com.demo.study.model.Node;
 import com.demo.study.model.SimulationConfig;
 import com.demo.study.model.result.Result;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.util.List;
 import java.util.Map;
@@ -13,15 +17,15 @@ import java.util.Map;
  * @version 1.0
  * @date 2024/7/21 19:29
  */
-public class MyRouteAlgo extends Algorithm {
+@NoArgsConstructor
+@AllArgsConstructor
+public class MyRouteAlgo2 extends Algorithm {
     private Algorithm algorithm = new DsAlgo();
-
-    public MyRouteAlgo() {
-    }
-
-    public MyRouteAlgo(Algorithm algorithm) {
-        this.algorithm = algorithm;
-    }
+    private int algoType;
+    private String algoName;
+    private boolean controlFlag;
+    private int upDistance;
+    private int downDistance;
 
     @Override
     public Result<List<Node>> getCandidates(SimulationConfig param,
@@ -47,21 +51,26 @@ public class MyRouteAlgo extends Algorithm {
 
     @Override
     public String getAlgoName() {
-        return "我的算法";
+        return algoName;
     }
 
     @Override
     public int getAlgoType() {
-        return AlgoType.OPTICAL_ACOUSTIC.getAlgoType();
+        return algoType;
     }
 
     @Override
     public boolean getControlFlag() {
-        return true;
+        return controlFlag;
+    }
+
+    @Override
+    public int getUpDistance() {
+        return upDistance;
     }
 
     @Override
     public int getDownDistance() {
-        return 200;
+        return downDistance;
     }
 }

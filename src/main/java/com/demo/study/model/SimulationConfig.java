@@ -77,4 +77,5 @@ public class SimulationConfig {
     private boolean dangerousFlag = false;
     private int dangerousDistance;
     private int dangerousCount;
+    private List<Node> routeNodes;
 }

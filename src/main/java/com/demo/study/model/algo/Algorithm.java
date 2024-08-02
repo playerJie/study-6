@@ -47,6 +47,9 @@ public abstract class Algorithm {
         // 把源节点放进路由路径
         nodeIds.add(sourceNode.getId());
 
+        param.setRouteNodes(Lists.newArrayList());
+        param.getRouteNodes().add(param.getNodes().get(sourceNode.getId()));
+
         // 创建队列
         LinkedList<Node> queue = Lists.newLinkedList();
         // 把源节点放进队列
@@ -71,6 +74,13 @@ public abstract class Algorithm {
                 return false;
             }
             List<Node> candidateNodes = getCandiddatesResult.getData();
+
+            if (param.isEnableRelayFlag()) {
+                BigDecimal distance = BigDecimal.valueOf(MyUtils.distance(currentNode, destinationNode));
+                if (param.getDangerousCount() > 0 && distance.intValue() <= param.getDangerousDistance()) {
+                    param.setDangerousFlag(true);
+                }
+            }
 
             // 遍历候选节点
             for (Node candidateNode : candidateNodes) {
@@ -99,17 +109,13 @@ public abstract class Algorithm {
             // 缓存最大优先级的节点作为下一跳节点
             Node nextHopNode = param.getNodes().get(nodeIdWithMaxMeasure);
 
-            BigDecimal distance = BigDecimal.valueOf(MyUtils.distance(currentNode, destinationNode));
-            if (param.getDangerousCount() > 0 && distance.intValue() <= param.getDangerousDistance()) {
-                param.setDangerousFlag(true);
-            }
-
             // 当前节点往下一跳节点发送所有数据包
             int routingResult = sendPocket(param, currentNode, nextHopNode);
             // 发送成功
             if (routingResult == RoutingStatus.SUCCESS.getCode()) {
                 // 把下一跳节点放进路由路径中
                 nodeIds.add(nextHopNode.getId());
+                param.getRouteNodes().add(param.getNodes().get(nextHopNode.getId()));
                 // 下一跳节点入队
                 queue.addLast(nextHopNode);
             } else if (routingResult == RoutingStatus.SENDING_END_SUCCESS.getCode()) {
@@ -164,6 +170,14 @@ public abstract class Algorithm {
 
     public abstract boolean getControlFlag();
 
+    public int getUpDistance() {
+        return 0;
+    }
+
+    public int getDownDistance() {
+        return 0;
+    }
+
     /**
      * 模拟传输过程
      *
@@ -204,8 +218,11 @@ public abstract class Algorithm {
             // 缓存当前数据包
             Packet subPacket = subPacketEntry.getValue();
 
+            int minSendPacketEnergy = param.getAlgorithm().getAlgoType() == AlgoType.ACOUSTIC.getAlgoType() ?
+                    param.getConfig().getEnergyByAcoustic() : param.getConfig().getEnergyByOptical();
+
             // 发送端能量不足，返回失败
-            if (sendingEndNode.getEnergy() < param.getConfig().getEnergyByOptical()) {
+            if (sendingEndNode.getEnergy() < minSendPacketEnergy) {
                 MyUtils.saveFailureReason(param.getFailureReasons(), FailureReason.REASON_4);
                 return RoutingStatus.FAILURE.getCode();
             }
@@ -215,7 +232,7 @@ public abstract class Algorithm {
 
             // 如果满足发生故障的条件，处理发送节点故障
             if (
-                    //subPacketSequence == latch
+                //subPacketSequence == latch
                     param.isDangerousFlag() && ((double) subPacketSequence / sendingPackets.size()) > 0.6
             ) {
                 /*boolean receiveEndUnavailableFlag = new Random().nextBoolean();
@@ -245,22 +262,26 @@ public abstract class Algorithm {
                 param.getUnavailableInfo().getEncountered().incrementAndGet();
 
                 // 接收端没有声通信距离内的邻居
-                if (CollectionUtils.isEmpty(receivingEndNode.getAcousticNeighborNodes())) {
+                if (CollectionUtils.isEmpty(receivingEndNode.getContinueNodes())) {
                     MyUtils.saveFailureReason(param.getFailureReasons(), FailureReason.REASON_6);
                     // 返回失败
                     return RoutingStatus.FAILURE.getCode();
                 }
 
                 List<Node> relayNodes = Lists.newArrayList();
+
+                int minSendContinueEnergy = param.getAlgorithm().getAlgoType() == AlgoType.OPTICAL.getAlgoType() ?
+                        param.getConfig().getEnergyByOptical() : param.getConfig().getEnergyByAcoustic();
+
                 // 遍历接收端声通信距离内的所有邻居
-                for (Node acousticNeighborNode : receivingEndNode.getAcousticNeighborNodes()) {
+                for (Node continueNode : receivingEndNode.getContinueNodes()) {
                     // 如果当前遍历的节点可用、能量充足、声通信距离内有邻居、完整数据包缓冲区里面包含所需数据包的ID的表
-                    if (acousticNeighborNode.isAvailableFlag()
-                            && acousticNeighborNode.getEnergy() >= param.getConfig().getEnergyByAcoustic()
-                            && CollectionUtils.isNotEmpty(acousticNeighborNode.getAcousticNeighborNodes())
-                            && acousticNeighborNode.getCompletePacketMapping().containsKey(subPacket.getId())
-                            && acousticNeighborNode.getPoint().getZAxis() <= receivingEndNode.getPoint().getZAxis()) {
-                        relayNodes.add(acousticNeighborNode);
+                    if (continueNode.isAvailableFlag()
+                            && continueNode.getEnergy() >= minSendContinueEnergy
+                            //&& CollectionUtils.isNotEmpty(continueNode.getAcousticNeighborNodes())
+                            && continueNode.getCompletePacketMapping().containsKey(subPacket.getId())
+                            && continueNode.getPoint().getZAxis() <= receivingEndNode.getPoint().getZAxis()) {
+                        relayNodes.add(continueNode);
                     }
                 }
 

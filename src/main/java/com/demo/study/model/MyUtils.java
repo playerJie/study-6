@@ -170,6 +170,7 @@ public class MyUtils {
         node.setIncompletePacketMapping(Maps.newLinkedHashMap());
         node.setCompletePacketMapping(Maps.newLinkedHashMap());
         node.setPacketIdGenerator(new AtomicInteger(1));
+        node.setContinueNodes(Lists.newArrayList());
         return node;
     }
 
@@ -198,7 +199,7 @@ public class MyUtils {
                                                    int minTransmissionEnergy,
                                                    int flag) {
         // 测试flag的值是不是为0或者1，不是抛异常
-        if (flag != 0 && flag != 1) {
+        if (flag != 0 && flag != 1 && flag != 2) {
             throw new RuntimeException();
         }
         // 遍历每个节点
@@ -217,8 +218,13 @@ public class MyUtils {
                         nodes.get(i).getOpticalNeighborNodes().add(nodes.get(j));
                         continue;
                     }
-                    // 如果是声通信，把节点放进自己的声学邻居集合
-                    nodes.get(i).getAcousticNeighborNodes().add(nodes.get(j));
+                    if (flag == 1) {
+                        // 如果是声通信，把节点放进自己的声学邻居集合
+                        nodes.get(i).getAcousticNeighborNodes().add(nodes.get(j));
+                        continue;
+                    }
+                    // 向下找时要用到的节点
+                    nodes.get(i).getContinueNodes().add(nodes.get(j));
                 }
             }
         }
@@ -480,6 +486,7 @@ public class MyUtils {
             node.getIncompletePacketMapping().clear();
             node.getCompletePacketMapping().clear();
             node.getPacketIdGenerator().set(1);
+            node.getContinueNodes().clear();
         }
     }
 

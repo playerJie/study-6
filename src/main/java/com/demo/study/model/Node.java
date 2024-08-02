@@ -62,4 +62,5 @@ public class Node {
      * 通常包括节点ID，例如：节点ID假如是100，生成的ID是50，则完整的数据包ID是：100:50
      */
     private AtomicInteger packetIdGenerator;
+    private List<Node> continueNodes;
 }
